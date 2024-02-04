@@ -3,26 +3,113 @@ const inquirer = require('inquirer');
 const mysql = require('mysql');
 const fs = require('fs');
 const consoleTable = require('console.table');
+const database = require('./db');
 
-// TODO: Create an array of questions for user input
-function userInput(){
+
+const db = mysql.createConnection(
+  {
+    host: 'localhost',
+    user: 'root',
+    password: 'rootroot',
+    database: 'employee_info_db'
+  },
+  console.log(`Connected to the employee_info_db database.`)
+);
+
+db.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected as ID" + db.threadId);
+  
+  startEmployeeDashboard();
+});
+
+
+function startEmployeeDashboard(){
   return inquirer.prompt([
-  {name: 'license',
-  message: 'Select kind of license for this application:',
+  {name: "Commands",
+  message: "What would you like to do within the Employee Dashboard?",
   type: 'list',
-  choices: ["Academic Free License v3.0", "Apache license 2.0", "Artistic license 2.0", "Boost Software License 1.0", "BSD 2-clause license", "BSD 3-clause license", "Creative Commons Zero v1.0 Universal", "Creative Commons Attribution 4.0", "Creative Commons Attribution Share Alike 4.0", "Do What The Fuck You Want To Public License", "Educational Community License v2.0", "Eclipse Public License 1.0", "Eclipse Public License 2.0", "European Union Public License 1.1", "GNU Affero General Public License v3.0", "GNU General Public License v2.0", "GNU General Public License v3.0",  "GNU Lesser General Public License v2.1", "GNU Lesser General Public License v3.0", "ISC", "LaTeX Project Public License v1.3c", "Microsoft Public License",  "MIT", "Mozilla Public License 2.0", "Open Software License 3.0", "SIL Open Font License 1.1", "University of Illinois/NCSA Open Source License", "The Unlicense", "zLib License"]},
-  {name: 'title',
-  message: 'What is the title of this application?',
-  type: 'input'},
- 
-])};
+  choices: [
+    "Add department", 
+    "Add role", 
+    "Add employee", 
+    "View departments", 
+    "View roles", 
+    "View employees",
+    "Update employee role",
+    "Quit"
+  ]},
+  ])
+  .then(function(result) {
+    console.log("You entered: " + result.option);
 
+    switch (result.option) {
+      case "Add department":
+        addDepartment();
+        break;
+      case "Add role":
+        addRole();
+        break;
+      case "Add employee":
+        addEmployee();
+        break;
+      case "View departments":
+        viewDepartments();
+        break;
+      case "View roles":
+        viewRoles();
+        break;
+      case "View employees":
+        viewEmployees();
+        break;
+      case "Update employee role":
+        updateEmployeeRole();
+        break;
+        default:
+          quit();
+    }
+  });
+}
 
-// TODO: Create a function to initialize app
-async function init() {
-  let answers = await userInput();
+function addDepartment () {
+  inquirer.prompt({
+    name: "departmentName",
+    message: "What is the name of the department?",
+    type: "input"
+  })
+  .then(function(answer){
+    db.query("INSERT INTO department (name) VALUES (?)", [answer.departmentName], function(err, res) {
+      if (err) throw err;
+      console.table(res)
+      startEmployeeDashboard()
+    })
+  })
+}
+
+function addEmployee () {
+  inquirer.prompt({
+    name: "roleName",
+    message: "What is the name of the role?",
+    type: "input"
+  },
+  {
+    name: "salaryTotal",
+    message: "What is the salary for this role?",
+    type: "input" 
+  },
+  {
+    name: "deptID",
+    message: "What is the department id number?",
+    type: "input" 
   }
 
+  )
+  .then(function(answer){
+    db.query("INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)", [answer.roleName, answer.salaryTotal, answer.deptID], function(err, res) {
+      if (err) throw err;
+      console.table(res)
+      startEmployeeDashboard()
+    })
+  })
+}
 
-// Function call to initialize app
-init();
