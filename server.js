@@ -2,6 +2,7 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql');
 const fs = require('fs');
+const consoleTable = require('console.table');
 
 // TODO: Create an array of questions for user input
 function userInput(){
