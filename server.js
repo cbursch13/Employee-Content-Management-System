@@ -1,10 +1,9 @@
 // Packages needed for this application
 const inquirer = require('inquirer');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const fs = require('fs');
 const consoleTable = require('console.table');
-const database = require('./db');
-
+const database = require('.');
 
 const db = mysql.createConnection(
   {
@@ -16,53 +15,49 @@ const db = mysql.createConnection(
   console.log(`Connected to the employee_info_db database.`)
 );
 
-db.connect(function(err) {
-  if (err) throw err;
-  console.log("Connected as ID" + db.threadId);
-  
+db.connect(function(result) {
   startEmployeeDashboard();
 });
 
-
 function startEmployeeDashboard(){
   return inquirer.prompt([
-  {name: "Commands",
+  {name: "select",
   message: "What would you like to do within the Employee Dashboard?",
   type: 'list',
   choices: [
-    "Add department", 
-    "Add role", 
-    "Add employee", 
-    "View departments", 
-    "View roles", 
-    "View employees",
-    "Update employee role",
+    "View all departments", 
+    "View all roles", 
+    "View all employees",
+    "Add a department", 
+    "Add a role", 
+    "Add an employee", 
+    "Update an employee role",
     "Quit"
   ]},
   ])
   .then(function(result) {
-    console.log("You entered: " + result.option);
+    console.log("You entered: " + result.select);
 
-    switch (result.option) {
-      case "Add department":
+    switch (result.select) {
+      case "Add a department":
         addDepartment();
         break;
-      case "Add role":
+      case "Add a role":
         addRole();
         break;
-      case "Add employee":
+      case "Add an employee":
         addEmployee();
         break;
-      case "View departments":
+      case "View all departments":
         viewDepartments();
         break;
-      case "View roles":
+      case "View all roles":
         viewRoles();
         break;
-      case "View employees":
+      case "View all employees":
         viewEmployees();
         break;
-      case "Update employee role":
+      case "Update an employee role":
         updateEmployeeRole();
         break;
         default:
@@ -79,37 +74,147 @@ function addDepartment () {
   })
   .then(function(answer){
     db.query("INSERT INTO department (name) VALUES (?)", [answer.departmentName], function(err, res) {
-      if (err) throw err;
-      console.table(res)
-      startEmployeeDashboard()
-    })
-  })
+      if (err) {
+        console.error(err);
+      } else {
+        console.table(res);
+        startEmployeeDashboard();
+      }
+    });
+  });
 }
 
-function addEmployee () {
-  inquirer.prompt({
-    name: "roleName",
-    message: "What is the name of the role?",
+function addRole () {
+  inquirer.prompt([
+    {
+      name: "roleName",
+      message: "What is the name of the role?",
+      type: "input"
+    },
+    {
+      name: "salaryTotal",
+      message: "What is the salary for this role?",
+      type: "input" 
+    },
+    {
+      name: "deptID",
+      message: "What is the department id number?",
+      type: "input" 
+    }
+  ])
+  .then(function(answer){
+    db.query("INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)", [answer.roleName, answer.salaryTotal, answer.deptID], function(err, res) {
+      if (err) {
+        console.error(err);
+      } else {
+        console.table(res);
+        startEmployeeDashboard();
+      }
+    });
+  });
+}
+
+function addEmployee() {
+  inquirer.prompt([
+  {
+    name: "firstName",
+    message: "What is the first name of the new employee?",
     type: "input"
   },
   {
-    name: "salaryTotal",
-    message: "What is the salary for this role?",
-    type: "input" 
+    name: "lastName",
+    message: "What is the last name of the new employee?",
+    type: "input"
   },
   {
-    name: "deptID",
-    message: "What is the department id number?",
-    type: "input" 
+    name: "roleID",
+    message: "What is the new employee's role id number?",
+    type: "input"
+  },
+  {
+    name: "managerID",
+    message: "What is the new employee's manager id number?",
+    type: "input"
   }
-
-  )
-  .then(function(answer){
-    db.query("INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)", [answer.roleName, answer.salaryTotal, answer.deptID], function(err, res) {
-      if (err) throw err;
-      console.table(res)
-      startEmployeeDashboard()
-    })
-  })
+])
+  .then(function(answer) {
+    db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [answer.firstName, answer.lastName, answer.roleID, answer.managerID], function(err, res) {
+      if (err) {
+        console.error(err);
+      } else {
+        console.table(res);
+        startEmployeeDashboard();
+      }
+    });
+  });
 }
+
+//update functionality so update employee actually updates the role_id in the db
+function updateEmployeeRole() {
+  inquirer.prompt([
+    {
+      name: "employeeUpdate",
+      message: "Which employee would you like to update?",
+      type: "input"
+    },
+    {
+      name: "roleUpdate",
+      message: "What is the employee's new role id?",
+      type: "input"
+    }
+  ])
+  .then(function(answer) {
+    db.query("UPDATE employee SET role_id=? WHERE first_name=?", [answer.employeeUpdate, answer.roleUpdate, ], function(err, res){
+      if (err) {
+        console.error(err);
+      } else {
+        console.table(res);
+        startEmployeeDashboard();
+      }
+    });
+  });
+}
+
+function viewDepartments() {
+  let query = "SELECT * FROM department";
+  db.query(query, function(err, res) {
+    if (err) {
+      console.error(err);
+    } else {
+      console.table(res);
+      startEmployeeDashboard();
+    }
+  });
+}
+
+function viewRoles() {
+  let query = "SELECT * FROM role";
+  db.query(query, function(err, res) {
+    if (err) {
+      console.error(err);
+    } else {
+      console.table(res);
+      startEmployeeDashboard();
+    }
+  });
+}
+
+//update this function to include job title, departments, salaries and managers that employees report to.
+function viewEmployees() {
+  let query = "SELECT * FROM employee";
+  db.query(query, function(err, res) {
+    if (err) {
+      console.error(err);
+    } else {
+      console.table(res);
+      startEmployeeDashboard();
+    }
+  });
+}
+
+function quit() {
+  db.end();
+  process.exit();
+}
+
 
