@@ -84,93 +84,149 @@ function addDepartment () {
   });
 }
 
-function addRole () {
-  inquirer.prompt([
-    {
-      name: "roleName",
-      message: "What is the name of the role?",
-      type: "input"
-    },
-    {
-      name: "salaryTotal",
-      message: "What is the salary for this role?",
-      type: "input" 
-    },
-    {
-      name: "deptID",
-      message: "What is the department id number?",
-      type: "input" 
+function addRole() {
+  
+  db.query("SELECT id, name FROM department", function (err, departments) {
+    if (err) {
+      console.error("Error fetching departments:", err);
+      return;
     }
-  ])
-  .then(function(answer){
-    db.query("INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)", [answer.roleName, answer.salaryTotal, answer.deptID], function(err, res) {
-      if (err) {
-        console.error(err);
-      } else {
-        console.table(res);
-        startEmployeeDashboard();
+
+   
+    const departmentChoices = departments.map(department => department.name);
+
+    inquirer.prompt([
+      {
+        name: "roleName",
+        message: "What is the name of the role?",
+        type: "input"
+      },
+      {
+        name: "salaryTotal",
+        message: "What is the salary for this role?",
+        type: "input"
+      },
+      {
+        name: "dept",
+        message: "Which department does this role belong to?",
+        type: "list",
+        choices: departmentChoices
       }
+    ])
+    .then(function (answer) {
+      
+      const chosenDepartment = departments.find(department => department.name === answer.dept);
+      
+      if (!chosenDepartment) {
+        console.error("Error: Chosen department not found.");
+        return;
+      }
+
+      const departmentId = chosenDepartment.id;
+
+      db.query("INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)", [answer.roleName, answer.salaryTotal, departmentId], function (err, res) {
+        if (err) {
+          console.error(err);
+        } else {
+          console.table(res);
+          startEmployeeDashboard();
+        }
+      });
     });
   });
 }
 
 function addEmployee() {
-  inquirer.prompt([
-  {
-    name: "firstName",
-    message: "What is the first name of the new employee?",
-    type: "input"
-  },
-  {
-    name: "lastName",
-    message: "What is the last name of the new employee?",
-    type: "input"
-  },
-  {
-    name: "roleID",
-    message: "What is the new employee's role id number?",
-    type: "input"
-  },
-  {
-    name: "managerID",
-    message: "What is the new employee's manager id number?",
-    type: "input"
-  }
-])
-  .then(function(answer) {
-    db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [answer.firstName, answer.lastName, answer.roleID, answer.managerID], function(err, res) {
+
+  db.query("SELECT id, title FROM role", function (err, roles) {
+    if (err) {
+      console.error("Error fetching roles:", err);
+      return;
+    }
+
+    
+    db.query("SELECT id, CONCAT(first_name, ' ', last_name) AS manager FROM employee", function (err, managers) {
       if (err) {
-        console.error(err);
-      } else {
-        console.table(res);
-        startEmployeeDashboard();
+        console.error("Error fetching managers:", err);
+        return;
       }
+
+      inquirer.prompt([
+        {
+          name: "firstName",
+          message: "What is the first name of the new employee?",
+          type: "input"
+        },
+        {
+          name: "lastName",
+          message: "What is the last name of the new employee?",
+          type: "input"
+        },
+        {
+          name: "roleID",
+          message: "Select the role for the new employee:",
+          type: "list",
+          choices: roles.map(role => ({ name: role.title, value: role.id }))
+        },
+        {
+          name: "managerID",
+          message: "Select the manager for the new employee:",
+          type: "list",
+          choices: managers.map(manager => ({ name: manager.manager, value: manager.id }))
+        }
+      ])
+      .then(function(answer) {
+        db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)", [answer.firstName, answer.lastName, answer.roleID, answer.managerID], function(err, res) {
+          if (err) {
+            console.error(err);
+          } else {
+            console.table(res);
+            startEmployeeDashboard();
+          }
+        });
+      });
     });
   });
 }
 
-//update functionality so update employee actually updates the role_id in the db
 function updateEmployeeRole() {
-  inquirer.prompt([
-    {
-      name: "employeeUpdate",
-      message: "Which employee would you like to update?",
-      type: "input"
-    },
-    {
-      name: "roleUpdate",
-      message: "What is the employee's new role id?",
-      type: "input"
+  
+  db.query("SELECT id, CONCAT(first_name, ' ', last_name) AS employeeName FROM employee", function (err, employees) {
+    if (err) {
+      console.error("Error fetching employees:", err);
+      return;
     }
-  ])
-  .then(function(answer) {
-    db.query("UPDATE employee SET role_id=? WHERE first_name=?", [answer.employeeUpdate, answer.roleUpdate, ], function(err, res){
+
+    db.query("SELECT id, title FROM role", function (err, roles) {
       if (err) {
-        console.error(err);
-      } else {
-        console.table(res);
-        startEmployeeDashboard();
+        console.error("Error fetching roles:", err);
+        return;
       }
+
+      inquirer.prompt([
+        {
+          name: "employeeUpdate",
+          message: "Select the employee to update:",
+          type: "list",
+          choices: employees.map(employee => ({ name: employee.employeeName, value: employee.id }))
+        },
+        {
+          name: "roleUpdate",
+          message: "Select the new role for the employee:",
+          type: "list",
+          choices: roles.map(role => ({ name: role.title, value: role.id }))
+        }
+      ])
+      .then(function(answer) {
+        db.query("UPDATE employee SET role_id=? WHERE id=?", [answer.roleUpdate, answer.employeeUpdate], function(err, res){
+          if (err) {
+            console.error(err);
+          } else {
+            console.table(res);
+            startEmployeeDashboard();
+          }
+        });
+      });
     });
   });
 }
@@ -188,7 +244,7 @@ function viewDepartments() {
 }
 
 function viewRoles() {
-  let query = "SELECT * FROM role";
+  let query = "SELECT role.id AS 'Role ID', role.title AS 'Job Title', department.name AS 'Department Name', role.salary AS 'Salary' FROM role JOIN department ON role.department_id = department.id";
   db.query(query, function(err, res) {
     if (err) {
       console.error(err);
@@ -199,9 +255,20 @@ function viewRoles() {
   });
 }
 
-//update this function to include job title, departments, salaries and managers that employees report to.
 function viewEmployees() {
-  let query = "SELECT * FROM employee";
+  let query =  `SELECT 
+  e.id AS employee_id, 
+  e.first_name, 
+  e.last_name, 
+  r.title AS job_title,
+  d.name AS department,
+  r.salary,
+  CONCAT(m.first_name, ' ', m.last_name) AS manager
+FROM 
+  employee e
+  INNER JOIN role r ON e.role_id = r.id
+  INNER JOIN department d ON r.department_id = d.id
+  LEFT JOIN employee m ON e.manager_id = m.id`;
   db.query(query, function(err, res) {
     if (err) {
       console.error(err);
