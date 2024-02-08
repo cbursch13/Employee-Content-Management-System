@@ -27,7 +27,9 @@ salary DECIMAL(10,2) NOT NULL,
 
 department_id INT NOT NULL,
 
-PRIMARY KEY (id)
+PRIMARY KEY (id),
+
+FOREIGN KEY (department_id) REFERENCES department(id)
 
 );
 
@@ -44,6 +46,10 @@ role_id INT NOT NULL,
 
 manager_id INT,
 
-PRIMARY KEY (id)
+PRIMARY KEY (id),
+
+FOREIGN KEY (role_id) REFERENCES role(id),
+
+FOREIGN KEY (manager_id) REFERENCES employee(id)
 
 );
